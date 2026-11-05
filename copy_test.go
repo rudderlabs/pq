@@ -300,3 +300,34 @@ func BenchmarkCopyIn(b *testing.B) {
 		b.Fatalf("expected %d items, not %d", b.N, rows[0]["count"])
 	}
 }
+
+// A transaction can end while a COPY is still open, for example when
+// database/sql rolls it back after its context is cancelled. Only resploop may
+// read from the connection until the COPY has ended.
+func TestCopyInRollbackDuringCopy(t *testing.T) {
+	t.Parallel()
+	db := pqtest.MustDB(t)
+
+	for i := 0; i < 50; i++ {
+		tx := pqtest.Begin(t, db)
+		pqtest.Exec(t, tx, "create temp table tbl (a int)")
+		stmt, err := tx.Prepare(`copy tbl (a) from stdin`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := stmt.Exec(int64(1)); err != nil {
+			t.Fatal(err)
+		}
+
+		done := make(chan error, 1)
+		go func() { done <- tx.Rollback() }()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatalf("iteration %d: %s", i, err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("iteration %d: Rollback did not return", i)
+		}
+	}
+}

@@ -71,6 +71,7 @@ awaitCopyInResponse:
 				resErr = errBinaryCopyNotSupported
 				break awaitCopyInResponse
 			}
+			cn.copyIn = ci
 			go ci.resploop()
 			return ci, nil
 		case proto.CopyOutResponse:
@@ -312,6 +313,7 @@ func (ci *copyin) Close() error {
 		return nil
 	}
 	ci.closed = true
+	ci.cn.copyIn = nil
 
 	if err := ci.getBad(); err != nil {
 		return err
@@ -336,4 +338,28 @@ func (ci *copyin) Close() error {
 		return err
 	}
 	return nil
+}
+
+// abortCopyIn ends an open COPY before the connection is used for another
+// command. The COPY's resploop is the only reader of the connection until it
+// sees ReadyForQuery, so issuing a command first would leave two goroutines
+// reading the same stream. The server ignores CopyFail if the COPY has already
+// ended, e.g. after a cancel request.
+func (cn *conn) abortCopyIn() {
+	ci := cn.copyIn
+	if ci == nil {
+		return
+	}
+	cn.copyIn = nil
+	ci.closed = true
+
+	// Don't use cn.writeBuf: resploop may be using the scratch buffer.
+	b := &writeBuf{buf: []byte{byte(proto.CopyFail), 0, 0, 0, 0}, pos: 1}
+	b.string("pq: transaction ended during COPY")
+	if err := cn.send(b); err != nil {
+		cn.err.set(driver.ErrBadConn)
+		cn.c.Close() // Unblock resploop.
+	}
+	<-ci.done
+	cn.inProgress.Store(false)
 }

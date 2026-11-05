@@ -163,6 +163,10 @@ type conn struct {
 	txnStatus transactionStatus
 	txnFinish func()
 
+	// Open COPY FROM STDIN, if any. Its resploop goroutine reads from the
+	// connection until the COPY ends.
+	copyIn *copyin
+
 	// Save connection arguments to use during CancelRequest.
 	dialer          Dialer
 	cfg             Config
@@ -515,6 +519,7 @@ func (cn *conn) Commit() error {
 	if err := cn.checkIsInTransaction(true); err != nil {
 		return err
 	}
+	cn.abortCopyIn()
 
 	// We don't want the client to think that everything is okay if it tries
 	// to commit a failed transaction.  However, no matter what we return,
@@ -560,6 +565,7 @@ func (cn *conn) rollback() (err error) {
 	if err := cn.checkIsInTransaction(true); err != nil {
 		return err
 	}
+	cn.abortCopyIn()
 
 	_, commandTag, err := cn.simpleExec("ROLLBACK")
 	if err != nil {
