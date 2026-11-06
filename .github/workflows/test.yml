@@ -5,12 +5,20 @@ on:
   push:
     branches: ['main', 'master']
 
+permissions:
+  contents: read
+
 jobs:
   fuzz:
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: 'actions/checkout@v6'
-      - uses: 'actions/setup-go@v6'
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' # v6.1.0
+      - uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16' # v6.5.0
         with: {go-version: 'stable'}
       - shell: 'bash'
         run: |
@@ -30,8 +38,13 @@ jobs:
         pg: ['14', '15', '16', '17', '18', '19']
         go: ['1.23', '1.27']
     steps:
-    - uses: 'actions/checkout@v6'
-    - uses: 'actions/setup-go@v6'
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+
+    - uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' # v6.1.0
+    - uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16' # v6.5.0
       with:
         go-version: ${{ matrix.go }}
     - name: 'Start PostgreSQL'
@@ -52,8 +65,13 @@ jobs:
   pgbouncer:
     runs-on: 'ubuntu-latest'
     steps:
-    - uses: 'actions/checkout@v6'
-    - uses: 'actions/setup-go@v6'
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+
+    - uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' # v6.1.0
+    - uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16' # v6.5.0
       with: {go-version: '1.26'}
     - name: 'Start PostgreSQL'
       run: |
@@ -77,8 +95,13 @@ jobs:
   cockroach:
     runs-on: 'ubuntu-latest'
     steps:
-    - uses: 'actions/checkout@v6'
-    - uses: 'actions/setup-go@v6'
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+
+    - uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' # v6.1.0
+    - uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16' # v6.5.0
       with: {go-version: '1.26'}
     - name: 'Start CockroachDB'
       run: |
@@ -99,8 +122,8 @@ jobs:
   #pgpool:
   #  runs-on: 'ubuntu-latest'
   #  steps:
-  #  - uses: 'actions/checkout@v6'
-  #  - uses: 'actions/setup-go@v6'
+  #  - uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' # v6.1.0
+  #  - uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16' # v6.5.0
   #    with: {go-version: '1.26'}
   #  - name: 'Start PostgreSQL'
   #    run: |
@@ -130,9 +153,9 @@ jobs:
   #      pg: ['18']
   #      go: ['1.18', '1.26']
   #  steps:
-  #  - uses: 'actions/checkout@v6'
+  #  - uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' # v6.1.0
   #  - uses: 'douglascamata/setup-docker-macos-action@v1'
-  #  - uses: 'actions/setup-go@v6'
+  #  - uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16' # v6.5.0
   #    with:
   #      go-version: ${{ matrix.go }}
   #  - name: 'Start PostgreSQL'
@@ -163,7 +186,7 @@ jobs:
   #      pg: ['18']
   #      go: ['1.26']
   #  steps:
-  #  - uses: 'actions/checkout@v6'
+  #  - uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' # v6.1.0
   #  - uses: 'Vampire/setup-wsl@v6'
   #  # ubuntu because Debian doesn't work: https://github.com/Vampire/setup-wsl/issues/76
   #    with: {distribution: 'Ubuntu-24.04', additional-packages: 'docker.io docker-compose-v2'}
@@ -176,7 +199,7 @@ jobs:
   #      }
   #      echo '127.0.0.1 postgres postgres-invalid' | sudo tee -a /etc/hosts
 
-  #  - uses: 'actions/setup-go@v6'
+  #  - uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16' # v6.5.0
   #    with:
   #      go-version: ${{ matrix.go }}
   #  - name: 'Run tests'
